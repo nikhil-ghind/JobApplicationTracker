@@ -1,0 +1,111 @@
+// Prisma schema for Job Tracker
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApplicationStatus {
+  Applied
+  InReview
+  Assessment
+  PhoneScreen
+  Interview
+  Onsite
+  Offer
+  Rejected
+  Withdrawn
+  Ghosted
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password_hash String
+  created_at    DateTime       @default(now())
+
+  // Relations
+  emailAccounts   EmailAccount[]
+  jobApplications JobApplication[]
+}
+
+model EmailAccount {
+  id               String    @id @default(uuid())
+  user_id          String
+  user             User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  provider         String    @default("gmail")
+  email_address    String
+  provider_sub     String
+  access_token     String?
+  refresh_token    String
+  token_expires_at DateTime?
+  metadata         Json?
+  created_at       DateTime  @default(now())
+
+  // Relations
+  emailMessages   EmailMessage[]
+  jobApplications JobApplication[]
+}
+
+model JobApplication {
+  id                String            @id @default(uuid())
+  user_id           String
+  user              User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  email_account_id  String
+  emailAccount      EmailAccount      @relation(fields: [email_account_id], references: [id], onDelete: Cascade)
+
+  company           String
+  role              String
+  location          String?
+  source            String?
+  status            ApplicationStatus
+  applied_at        DateTime?
+  last_update_at    DateTime?
+  confidence        Float?
+
+  dedupe_key_raw    String
+  dedupe_key_hash   String            @unique
+  extra             Json?
+
+  // Relations
+  events            ApplicationEvent[]
+
+  // Index for debugging on raw dedupe key
+  @@index([dedupe_key_raw])
+}
+
+model ApplicationEvent {
+  id                 String         @id @default(uuid())
+  job_application_id String
+  jobApplication     JobApplication @relation(fields: [job_application_id], references: [id], onDelete: Cascade)
+
+  event_type         String
+  occurred_at        DateTime
+  payload            Json?
+}
+
+model EmailMessage {
+  id                   String      @id @default(uuid())
+  email_account_id     String
+  emailAccount         EmailAccount @relation(fields: [email_account_id], references: [id], onDelete: Cascade)
+
+  provider_message_id  String
+  thread_id            String?
+  subject              String?
+  from_addr            String?
+  received_at          DateTime
+  snippet              String?
+  headers              Json?
+  body_pointer         String?
+  parsed               Boolean     @default(false)
+
+  // Unique per account
+  @@unique([email_account_id, provider_message_id])
+}

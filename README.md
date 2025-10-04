@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Job Tracker
 
-## Getting Started
+A Next.js app to track job applications with Gmail integration and NextAuth.
 
-First, run the development server:
+## Prerequisites
+- Node.js 18+ (recommend 20+)
+- A PostgreSQL database
+- Google OAuth credentials (Client ID and Client Secret)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Installation
+
+1) Clone and install dependencies
+- npm: `npm install`
+- pnpm: `pnpm install`
+- yarn: `yarn install`
+
+2) Configure environment variables
+Create a `.env` file in the project root:
+
+```
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=replace_with_a_long_random_string
+
+# Database
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DBNAME?schema=public
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To generate a secure NEXTAUTH_SECRET you can use Node:
+```
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3) Setup the database and Prisma
+- Apply Prisma schema: `npx prisma migrate deploy`
+- (Dev) If you need to create migrations: `npx prisma migrate dev`
+- Generate Prisma client (optional, included in postinstall normally): `npx prisma generate`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4) Run the development server
+- Use Node directly to avoid PowerShell execution policy issues:
+```
+node node_modules/next/dist/bin/next dev --turbopack
+```
+Or use package scripts (if your shell allows):
+- `npm run dev` or `pnpm dev` or `yarn dev`
 
-## Learn More
+5) Open the app
+- http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
+## Authentication Flow
+- Visiting `/` requires authentication and will redirect unauthenticated users to `/signin`.
+- Sign in using email/password (Credentials provider) or Google OAuth.
+- After sign-in, you will be redirected to `/`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Gmail Integration
+- Connect Gmail at `/settings/accounts`.
+- The app stores access and refresh tokens for Gmail and automatically refreshes tokens when needed.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Useful Commands
+- Build: `npm run build` (or `pnpm build`, `yarn build`)
+- Start production: `npm run start`
+- Lint: `npm run lint`
+- Prisma Studio: `npx prisma studio`
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+- Ensure your Google OAuth consent screen is configured and the redirect URI includes: `http://localhost:3000/api/gmail/callback`.
+- For production deployments, set proper environment variables and secure NEXTAUTH_SECRET.
