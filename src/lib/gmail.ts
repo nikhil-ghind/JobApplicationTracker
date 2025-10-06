@@ -49,9 +49,9 @@ export function createOAuthClientForAccount(account: EmailAccountLike): OAuth2Cl
         await prisma.emailAccount.update({ where: { id: account.id }, data })
       }
     } catch (err) {
-      // Avoid leaking tokens; log minimal context in development only
+      // Structured logging: module + timestamp
       if (process.env.NODE_ENV === 'development') {
-        console.warn('[gmail] failed to persist refreshed tokens')
+        console.warn(`[${new Date().toISOString()}][gmail] failed to persist refreshed tokens`)
       }
     }
   })
@@ -97,6 +97,24 @@ export async function ensureFreshAccessToken(oauth2: OAuth2Client, account: Emai
         throw new Error('No valid Gmail access token and no refresh token available.')
       }
     }
+  }
+}
+
+/**
+ * Force a refresh of the Gmail access token (used on 401 responses).
+ * We artificially invalidate expiry_date and trigger getAccessToken.
+ */
+export async function forceRefreshAccessToken(oauth2: OAuth2Client, account: EmailAccountLike): Promise<void> {
+  try {
+    // Invalidate expiry to force refresh
+    ;(oauth2 as any).credentials = {
+      ...(oauth2 as any).credentials,
+      expiry_date: Date.now() - 60000,
+      refresh_token: account.refresh_token,
+    }
+    await oauth2.getAccessToken()
+  } catch (err) {
+    throw new Error('Forced Gmail token refresh failed. Please reconnect your account.')
   }
 }
 

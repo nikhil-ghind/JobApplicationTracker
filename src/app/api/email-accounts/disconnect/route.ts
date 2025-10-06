@@ -3,10 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
 
@@ -14,7 +11,8 @@ export async function POST(
     return NextResponse.redirect(new URL('/signin', baseUrl))
   }
 
-  const id = params.id
+  const url = new URL(req.url)
+  const id = url.searchParams.get('id') || undefined
   if (!id) {
     return NextResponse.json({ error: 'Missing account id' }, { status: 400 })
   }

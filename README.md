@@ -15,30 +15,40 @@ A Next.js app to track job applications with Gmail integration and NextAuth.
 - yarn: `yarn install`
 
 2) Configure environment variables
-Create a `.env` file in the project root:
-
+Use the provided example file and copy it to your local env:
 ```
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=replace_with_a_long_random_string
+# Windows PowerShell
+Copy-Item .env.example .env.local
 
-# Database
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DBNAME?schema=public
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+# macOS/Linux
+cp .env.example .env.local
 ```
+Edit `.env.local` with your real values. The app reads `process.env.*` in server-side code.
 
-To generate a secure NEXTAUTH_SECRET you can use Node:
+Required variables:
+```
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="<32-byte-hex>"
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/job_tracker?schema=public"
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+Generate a secure NEXTAUTH_SECRET:
 ```
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
+Google OAuth (dev) configuration:
+- Authorized JavaScript origin: `http://localhost:3000`
+- Authorized redirect URIs:
+  - `http://localhost:3000/api/auth/callback/google`
+  - `http://localhost:3000/api/gmail/callback`
+
 3) Setup the database and Prisma
 - Apply Prisma schema: `npx prisma migrate deploy`
-- (Dev) If you need to create migrations: `npx prisma migrate dev`
-- Generate Prisma client (optional, included in postinstall normally): `npx prisma generate`
+- (Dev) Create migrations: `npx prisma migrate dev`
+- Generate Prisma client: `npx prisma generate`
+  - Note: Prisma client is generated to `src/generated/prisma` (ignored by Git); you must generate it locally.
 
 4) Run the development server
 - Use Node directly to avoid PowerShell execution policy issues:
@@ -50,6 +60,8 @@ Or use package scripts (if your shell allows):
 
 5) Open the app
 - http://localhost:3000
+
+If you update `.env.local`, restart the dev server so changes are picked up.
 
 ## Authentication Flow
 - Visiting `/` requires authentication and will redirect unauthenticated users to `/signin`.

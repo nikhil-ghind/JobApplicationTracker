@@ -21,6 +21,10 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
   })
   if (!resp.ok) {
     const text = await resp.text()
+    // Log the raw error response in development to aid debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[gmail] Token exchange failed response:', text)
+    }
     throw new Error(`Token exchange failed: ${text}`)
   }
   return (await resp.json()) as {
@@ -39,6 +43,9 @@ async function fetchProfile(accessToken: string) {
   })
   if (!resp.ok) {
     const text = await resp.text()
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[gmail] Failed to fetch Gmail profile response:', text)
+    }
     throw new Error(`Failed to fetch Gmail profile: ${text}`)
   }
   const data = (await resp.json()) as { emailAddress: string }
@@ -109,7 +116,11 @@ export async function GET(req: Request) {
     const res = NextResponse.redirect(new URL('/settings/accounts?success=1', baseUrl))
     res.cookies.delete('gmail_oauth_state')
     return res
-  } catch (e) {
+  } catch (e: any) {
+    // Log detailed error in development to help diagnose issues like redirect_uri_mismatch or invalid_client
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[gmail] OAuth callback error:', e?.message ?? e)
+    }
     return NextResponse.redirect(new URL('/settings/accounts?error=Gmail%20connect%20failed', baseUrl))
   }
 }

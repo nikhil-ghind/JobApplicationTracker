@@ -1,5 +1,7 @@
 // Email message parser: derive company, role, source, status, eventType, eventDate, confidence from Gmail message fields
 
+import crypto from 'crypto'
+
 export type RawGmailMessageInput = {
   subject?: string | null
   headers?: Record<string, string | string[] | undefined> | null
@@ -243,6 +245,27 @@ function computeConfidence(source: string, statusMatched: boolean, role?: string
   if (company) score += 0.1
   if (score > 1) score = 1
   return Number(score.toFixed(2))
+}
+
+function normalizeForKey(s?: string | null): string {
+  const base = (s ?? '').toLowerCase().trim().replace(/\s+/g, ' ')
+  const noSuffix = base.replace(/\b(inc\.?|llc|corp\.?|co\.?|company)\b$/i, '').trim()
+  const cleaned = noSuffix.replace(/[^\w &]+/g, '').replace(/\s+/g, ' ').trim()
+  return cleaned
+}
+
+export function makeDedupeKey(
+  company: string | undefined | null,
+  role: string | undefined | null,
+  emailAccountId: string,
+  variantFingerprint?: string
+): { raw: string; hash: string } {
+  const c = normalizeForKey(company)
+  const r = normalizeForKey(role)
+  const baseRaw = `${c}|${r}|${emailAccountId}`
+  const raw = variantFingerprint && variantFingerprint.length > 0 ? `${baseRaw}#v:${variantFingerprint}` : baseRaw
+  const hash = crypto.createHash('sha256').update(raw, 'utf8').digest('hex')
+  return { raw, hash }
 }
 
 export function parseGmailMessage(input: RawGmailMessageInput): ParsedEmailEvent {
